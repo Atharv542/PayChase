@@ -1,4 +1,3 @@
-// 🔹 SAME IMPORTS — NO LOGIC CHANGE
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Popup from "./PopUp";
@@ -8,23 +7,16 @@ import {
   Bell,
   CheckCircle2,
   Clock3,
-  Filter,
   Search,
   FileText,
-  X,
 } from "lucide-react";
 
-/* ---------- Helpers (unchanged) ---------- */
+/* ---------- Helpers ---------- */
 function formatDate(iso) {
   if (!iso) return "—";
-  const d = new Date(iso);
-  return d.toISOString().slice(0, 10);
-}
-function moneyWith(symbol, n) {
-  return `${symbol}${Number(n || 0).toFixed(2)}`;
+  return new Date(iso).toISOString().slice(0, 10);
 }
 
-/* ---------- Status helpers ---------- */
 function statusPill(status) {
   if (status === "PAID") {
     return {
@@ -42,81 +34,6 @@ function statusPill(status) {
   };
 }
 
-/* ---------- Currency ---------- */
-const CURRENCY_OPTIONS = [
-  { code: "INR", symbol: "₹", name: "Indian Rupee" },
-  { code: "USD", symbol: "$", name: "US Dollar" },
-  { code: "EUR", symbol: "€", name: "Euro" },
-  { code: "GBP", symbol: "£", name: "British Pound" },
-];
-
-// 🔹 Download invoice PDF
-const downloadInvoice = (doc) => {
-  window.open(
-    `https://paychase-backend.onrender.com/api/documents/${doc._id}/pdf`,
-    "_blank"
-  );
-};
-
-// 🔹 Generate reminder
-const generateReminder = async (doc) => {
-  try {
-    const res = await fetch(
-      `https://paychase-backend.onrender.com/api/ai/reminder/${doc._id}`,
-      { method: "POST", credentials: "include" }
-    );
-
-    const data = await res.json();
-    if (!res.ok) {
-      showPopup({ title: "Error", message: data?.error || "Failed to generate reminder" });
-      return;
-    }
-
-    showPopup({
-      title: "Reminder Message",
-      message: data.message,
-      primaryText: "Copy",
-      onPrimary: async () => {
-        await navigator.clipboard.writeText(data.message);
-        closePopup();
-      },
-    });
-  } catch {
-    showPopup({ title: "Error", message: "AI reminder failed" });
-  }
-};
-
-// 🔹 Toggle paid / pending
-const togglePaid = async (doc) => {
-  try {
-    const nextStatus = doc.status === "PAID" ? "PENDING" : "PAID";
-
-    const res = await fetch(
-      `https://paychase-backend.onrender.com/api/documents/${doc._id}/status`,
-      {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: nextStatus }),
-      }
-    );
-
-    const data = await res.json();
-    if (!res.ok) {
-      showPopup({ title: "Error", message: data?.error || "Failed to update status" });
-      return;
-    }
-
-    // 🔹 Update UI instantly
-    setDocuments((prev) =>
-      prev.map((d) => (d._id === doc._id ? data.document : d))
-    );
-  } catch {
-    showPopup({ title: "Error", message: "Status update failed" });
-  }
-};
-
-
 /* ---------- Dashboard ---------- */
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -127,9 +44,26 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
 
   /* ---------- Popup ---------- */
-  const [popup, setPopup] = useState({ open: false });
-  const showPopup = (p) => setPopup({ open: true, ...p });
-  const closePopup = () => setPopup({ open: false });
+  const [popup, setPopup] = useState({
+    open: false,
+    title: "",
+    message: "",
+    primaryText: "OK",
+    onPrimary: null,
+  });
+
+  const showPopup = ({ title, message, primaryText = "OK", onPrimary }) => {
+    setPopup({
+      open: true,
+      title,
+      message,
+      primaryText,
+      onPrimary: onPrimary || (() => setPopup((p) => ({ ...p, open: false }))),
+    });
+  };
+
+  const closePopup = () =>
+    setPopup((p) => ({ ...p, open: false }));
 
   /* ---------- Fetch invoices ---------- */
   useEffect(() => {
@@ -150,6 +84,69 @@ export default function Dashboard() {
     })();
   }, [filter]);
 
+  /* ---------- Actions ---------- */
+  const downloadInvoice = (doc) => {
+    window.open(
+      `https://paychase-backend.onrender.com/api/documents/${doc._id}/pdf`,
+      "_blank"
+    );
+  };
+
+  const generateReminder = async (doc) => {
+    try {
+      const res = await fetch(
+        `https://paychase-backend.onrender.com/api/ai/reminder/${doc._id}`,
+        { method: "POST", credentials: "include" }
+      );
+
+      const data = await res.json();
+      if (!res.ok) {
+        showPopup({ title: "Error", message: data?.error || "Failed" });
+        return;
+      }
+
+      showPopup({
+        title: "Reminder Message",
+        message: data.message,
+        primaryText: "Copy",
+        onPrimary: async () => {
+          await navigator.clipboard.writeText(data.message);
+          closePopup();
+        },
+      });
+    } catch {
+      showPopup({ title: "Error", message: "AI reminder failed" });
+    }
+  };
+
+  const togglePaid = async (doc) => {
+    try {
+      const nextStatus = doc.status === "PAID" ? "PENDING" : "PAID";
+
+      const res = await fetch(
+        `https://paychase-backend.onrender.com/api/documents/${doc._id}/status`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: nextStatus }),
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) {
+        showPopup({ title: "Error", message: data?.error || "Failed" });
+        return;
+      }
+
+      setDocuments((prev) =>
+        prev.map((d) => (d._id === doc._id ? data.document : d))
+      );
+    } catch {
+      showPopup({ title: "Error", message: "Update failed" });
+    }
+  };
+
   /* ---------- Search ---------- */
   const filteredDocs = useMemo(() => {
     const q = search.toLowerCase();
@@ -164,141 +161,69 @@ export default function Dashboard() {
     <>
       <Popup {...popup} onClose={closePopup} />
 
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-orange-50 px-3 sm:px-6 py-6">
+      <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-6xl mx-auto">
-
-          {/* ---------- Header ---------- */}
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border shadow-sm text-sm">
-                <FileText className="h-4 w-4 text-emerald-600" />
-                Invoice Dashboard
-              </div>
-              <h1 className="mt-3 text-3xl md:text-4xl font-extrabold">
-                PayChase Invoices
-              </h1>
-            </div>
-
+          {/* Header */}
+          <div className="flex justify-between mb-6">
+            <h1 className="text-3xl font-bold">Invoices</h1>
             <button
               onClick={() => navigate("/document")}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold"
+              className="bg-emerald-600 text-white px-4 py-2 rounded-xl"
             >
-              <Plus className="h-5 w-5" />
-              Create Invoice
+              <Plus className="inline mr-1" /> Create
             </button>
           </div>
 
-          {/* ---------- Filters + Search ---------- */}
-          <div className="bg-white rounded-2xl border shadow-sm p-4 mb-5">
-            <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-
-              <div className="flex flex-wrap gap-2">
-                {["ALL", "PENDING", "PAID"].map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setFilter(f)}
-                    className={`px-4 py-1.5 rounded-xl text-sm font-semibold border
-                      ${filter === f
-                        ? "bg-emerald-600 text-white"
-                        : "bg-white hover:bg-gray-50"
-                      }`}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
-
-              <div className="relative w-full md:w-[320px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search invoice / client"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border focus:ring-2 focus:ring-emerald-500 outline-none"
-                />
-              </div>
-            </div>
+          {/* Search */}
+          <div className="mb-4 relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 pr-3 py-2 border rounded-xl w-full"
+              placeholder="Search invoice / client"
+            />
           </div>
 
-          {/* ---------- Content ---------- */}
+          {/* List */}
           {loadingList ? (
-            <div className="text-gray-600">Loading invoices…</div>
+            <div>Loading…</div>
           ) : filteredDocs.length === 0 ? (
-            <div className="bg-white rounded-2xl border p-6">
-              No invoices found.
-            </div>
+            <div>No invoices</div>
           ) : (
-            <div className="space-y-4">
-              {filteredDocs.map((doc) => {
-                const s = statusPill(doc.status);
-                const Icon = s.icon;
+            filteredDocs.map((doc) => {
+              const s = statusPill(doc.status);
+              const Icon = s.icon;
 
-                return (
-                  <div
-                    key={doc._id}
-                    className="bg-white rounded-2xl border shadow-sm p-4"
-                  >
-                    {/* Mobile Card */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
-                          <div className="font-bold">
-                            {doc.documentNumber}
-                          </div>
-                        </div>
-
-                        <div className="text-sm text-gray-600 mt-1">
-                          {doc.client?.name}
-                        </div>
-
-                        <div className="mt-2 inline-flex items-center gap-2">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${s.cls}`}>
-                            <Icon className="inline h-3 w-3 mr-1" />
-                            {s.label}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            Due: {formatDate(doc.dueDate)}
-                          </span>
-                        </div>
+              return (
+                <div key={doc._id} className="bg-white p-4 rounded-xl mb-3 border">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="font-bold">{doc.documentNumber}</div>
+                      <div className="text-sm text-gray-500">
+                        {doc.client?.name}
                       </div>
+                      <span className={`text-xs px-2 py-1 border rounded ${s.cls}`}>
+                        <Icon className="inline h-3 w-3 mr-1" />
+                        {s.label}
+                      </span>
+                    </div>
 
-                      {/* Amount + Actions */}
-                      <div className="flex flex-col items-end gap-3">
-                        <div className="text-lg font-extrabold">
-                          ₹{doc.grandTotal}
-                        </div>
-
-                        <div className="flex gap-2">
-                          <button
-                            className="p-2 rounded-lg border hover:bg-gray-50"
-                            title="Download PDF"
-                            onClick={() => downloadInvoice(doc)}
-                          >
-                            <Download className="h-5 w-5" />
-                          </button>
-
-                          <button
-                            className="p-2 rounded-lg border hover:bg-gray-50"
-                            title="GenerateReminder"
-                            onClick={() => generateReminder(doc)}
-                          >
-                            <Bell className="h-5 w-5 text-emerald-600" />
-                          </button>
-
-                          <button 
-                            onClick={() => togglePaid(doc)}
-                            className="px-3 py-2 rounded-lg border font-semibold hover:bg-gray-50"
-                          >
-                            {doc.status === "PAID" ? "Paid" : "Mark Paid"}
-                          </button>
-                        </div>
-                      </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => downloadInvoice(doc)}>
+                        <Download />
+                      </button>
+                      <button onClick={() => generateReminder(doc)}>
+                        <Bell />
+                      </button>
+                      <button onClick={() => togglePaid(doc)}>
+                        {doc.status === "PAID" ? "Paid" : "Mark Paid"}
+                      </button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })
           )}
         </div>
       </div>
