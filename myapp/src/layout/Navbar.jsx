@@ -73,21 +73,42 @@ export default function Navbar() {
 };
 
 
-  const fetchMe = async () => {
+ const fetchMe = async () => {
   try {
     setLoadingUser(true);
 
-    const res = await fetch("https://paychase-backend.onrender.com/api/auth/me", {
-      credentials: "include",
-    });
+    // ✅ CHANGE 1: read token from localStorage
+    const token = localStorage.getItem("accessToken");
 
-    if (res.status === 401) {
+    // ✅ CHANGE 2: if no token, user is logged out
+    if (!token) {
       setUser(null);
+      setLoadingUser(false);
+      return;
+    }
 
-      // ✅ show popup ONLY if user had logged in before
+    // ✅ CHANGE 3: send Authorization header (NO cookies)
+    const res = await fetch(
+      "https://paychase-backend.onrender.com/api/auth/me",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!res.ok) {
+      // token expired / invalid
+      setUser(null);
+      localStorage.removeItem("accessToken");
+
       const wasLoggedIn = localStorage.getItem("wasLoggedIn") === "true";
 
-      if (wasLoggedIn && !shownSessionPopup.current && location.pathname !== "/login") {
+      if (
+        wasLoggedIn &&
+        !shownSessionPopup.current &&
+        location.pathname !== "/login"
+      ) {
         shownSessionPopup.current = true;
 
         showPopup({
@@ -101,15 +122,10 @@ export default function Navbar() {
       return;
     }
 
-    if (!res.ok) {
-      setUser(null);
-      return;
-    }
-
     const data = await res.json();
     setUser(data.user || null);
 
-    // ✅ if me works, user is logged in
+    // ✅ token is valid
     localStorage.setItem("wasLoggedIn", "true");
   } catch {
     setUser(null);
@@ -117,6 +133,7 @@ export default function Navbar() {
     setLoadingUser(false);
   }
 };
+
 
 
   useEffect(() => {
