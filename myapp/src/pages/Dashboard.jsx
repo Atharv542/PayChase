@@ -147,7 +147,7 @@ export default function Dashboard() {
     try {
       setLoadingList(true);
       const res = await fetch(
-        `http://localhost:8080/api/documents?status=${encodeURIComponent(filter)}`,
+        `https://paychase-backend.onrender.com/api/documents?status=${encodeURIComponent(filter)}`,
         { credentials: "include" }
       );
 
@@ -283,7 +283,7 @@ export default function Dashboard() {
     try {
       setGenLoadingId(doc._id);
 
-      const res = await fetch(`http://localhost:8080/api/ai/reminder/${doc._id}`, {
+      const res = await fetch(`https://paychase-backend.onrender.com/api/ai/reminder/${doc._id}`, {
         method: "POST",
         credentials: "include",
       });
@@ -326,7 +326,7 @@ export default function Dashboard() {
 
   const downloadInvoice = async (doc) => {
     try {
-      window.open(`http://localhost:8080/api/documents/${doc._id}/pdf`, "_blank");
+      window.open(`https://paychase-backend.onrender.com/api/documents/${doc._id}/pdf`, "_blank");
     } catch (e) {
       console.log(e);
       showPopup({
@@ -343,7 +343,7 @@ export default function Dashboard() {
       setPayLoadingId(doc._id);
       const nextStatus = doc.status === "PAID" ? "PENDING" : "PAID";
 
-      const res = await fetch(`http://localhost:8080/api/documents/${doc._id}/status`, {
+      const res = await fetch(`https://paychase-backend.onrender.com/api/documents/${doc._id}/status`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
