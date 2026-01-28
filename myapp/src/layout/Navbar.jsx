@@ -66,49 +66,21 @@ export default function Navbar() {
     setOpenUserMenu(false);
   };
 
-  const logout = () => {
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("user");
-  navigate("/login", { replace: true });
-};
-
-
- const fetchMe = async () => {
+  const fetchMe = async () => {
   try {
     setLoadingUser(true);
 
-    // ✅ CHANGE 1: read token from localStorage
-    const token = localStorage.getItem("accessToken");
+    const res = await fetch("https://paychase-backend.onrender.com/api/auth/me", {
+      credentials: "include",
+    });
 
-    // ✅ CHANGE 2: if no token, user is logged out
-    if (!token) {
+    if (res.status === 401) {
       setUser(null);
-      setLoadingUser(false);
-      return;
-    }
 
-    // ✅ CHANGE 3: send Authorization header (NO cookies)
-    const res = await fetch(
-      "https://paychase-backend.onrender.com/api/auth/me",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (!res.ok) {
-      // token expired / invalid
-      setUser(null);
-      localStorage.removeItem("accessToken");
-
+      // ✅ show popup ONLY if user had logged in before
       const wasLoggedIn = localStorage.getItem("wasLoggedIn") === "true";
 
-      if (
-        wasLoggedIn &&
-        !shownSessionPopup.current &&
-        location.pathname !== "/login"
-      ) {
+      if (wasLoggedIn && !shownSessionPopup.current && location.pathname !== "/login") {
         shownSessionPopup.current = true;
 
         showPopup({
@@ -122,10 +94,15 @@ export default function Navbar() {
       return;
     }
 
+    if (!res.ok) {
+      setUser(null);
+      return;
+    }
+
     const data = await res.json();
     setUser(data.user || null);
 
-    // ✅ token is valid
+    // ✅ if me works, user is logged in
     localStorage.setItem("wasLoggedIn", "true");
   } catch {
     setUser(null);
@@ -135,13 +112,25 @@ export default function Navbar() {
 };
 
 
-
   useEffect(() => {
     fetchMe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
- 
+ const handleLogout = async () => {
+  try {
+    await fetch("https://paychase-backend.onrender.com/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
+  } finally {
+    localStorage.removeItem("wasLoggedIn"); // ✅ important
+    setUser(null);
+    setOpenUserMenu(false);
+    setIsMobileMenuOpen(false);
+    navigate("/login", { replace: true });
+  }
+};
 
 
   const displayName = user?.username || user?.email || "Account";
@@ -213,7 +202,7 @@ export default function Navbar() {
                   {openUserMenu && (
                     <div className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow-md overflow-hidden">
                       <button
-                        onClick={logout}
+                        onClick={handleLogout}
                         className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
                       >
                         Logout
