@@ -1,5 +1,7 @@
+
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { authFetch } from "../../utils/authFetch"; // ✅ TOKEN FETCH
 import Popup from "./PopUp";
 import {
   Receipt,
@@ -25,10 +27,8 @@ export default function CreateDocument() {
   const [loading, setLoading] = useState(false);
   const [rewriteLoading, setRewriteLoading] = useState(false);
 
-  const [type] = useState("INVOICE");
-
-  const [issueDate, setIssueDate] = useState(() =>
-    new Date().toISOString().slice(0, 10)
+  const [issueDate, setIssueDate] = useState(
+    () => new Date().toISOString().slice(0, 10)
   );
   const [dueDate, setDueDate] = useState("");
 
@@ -51,52 +51,13 @@ export default function CreateDocument() {
     symbol: "₹",
     name: "Indian Rupee",
   });
+
   const [currencyOptions, setCurrencyOptions] = useState([]);
   const [currencyLoading, setCurrencyLoading] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        setCurrencyLoading(true);
-        const res = await fetch(
-          "https://restcountries.com/v3.1/all?fields=name,currencies,cca2"
-        );
-        const data = await res.json();
-
-        const opts = [];
-        for (const c of data) {
-          const currencies = c.currencies || {};
-          const codes = Object.keys(currencies);
-          if (codes.length > 0) {
-            const code = codes[0];
-            const info = currencies[code] || {};
-            opts.push({
-              country: c.name?.common || "Unknown",
-              code,
-              name: info.name || code,
-              symbol: info.symbol || code,
-            });
-          }
-        }
-
-        const seen = new Set();
-        const unique = [];
-        for (const op of opts.sort((a, b) => a.country.localeCompare(b.country))) {
-          if (!seen.has(op.code)) {
-            seen.add(op.code);
-            unique.push(op);
-          }
-        }
-
-        setCurrencyOptions(unique);
-      } catch (err) {
-        console.log(err);
-      } finally {
-        setCurrencyLoading(false);
-      }
-    })();
-  }, []);
-
+  /* =========================================================
+     🔔 POPUP
+     ========================================================= */
   const [popup, setPopup] = useState({
     open: false,
     title: "",
@@ -110,243 +71,167 @@ export default function CreateDocument() {
   const showPopup = (opts) => setPopup({ open: true, ...opts });
   const closePopup = () => setPopup((p) => ({ ...p, open: false }));
 
+  /* =========================================================
+     💱 LOAD CURRENCIES (PUBLIC API – NO AUTH)
+     ========================================================= */
+  useEffect(() => {
+    (async () => {
+      try {
+        setCurrencyLoading(true);
+        const res = await fetch(
+          "https://restcountries.com/v3.1/all?fields=name,currencies"
+        );
+        const data = await res.json();
+
+        const seen = new Set();
+        const list = [];
+
+        for (const c of data) {
+          const currencies = c.currencies || {};
+          for (const code of Object.keys(currencies)) {
+            if (!seen.has(code)) {
+              seen.add(code);
+              list.push({
+                code,
+                name: currencies[code].name || code,
+                symbol: currencies[code].symbol || code,
+              });
+            }
+          }
+        }
+
+        setCurrencyOptions(list.sort((a, b) => a.code.localeCompare(b.code)));
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setCurrencyLoading(false);
+      }
+    })();
+  }, []);
+
+  /* =========================================================
+     🧮 TOTALS
+     ========================================================= */
   const totals = useMemo(() => {
-    let subtotal = 0;
-    let discountTotal = 0;
-    let taxTotal = 0;
+    let subtotal = 0,
+      discountTotal = 0,
+      taxTotal = 0;
 
     for (const it of items) {
-      const base = (Number(it.qty) || 0) * (Number(it.rate) || 0);
-      const discount = Number(it.discount) || 0;
-      const afterDiscount = Math.max(base - discount, 0);
-      const tax = (afterDiscount * (Number(it.taxPercent) || 0)) / 100;
+      const base = it.qty * it.rate;
+      const afterDiscount = Math.max(base - it.discount, 0);
+      const tax = (afterDiscount * it.taxPercent) / 100;
 
       subtotal += base;
-      discountTotal += discount;
+      discountTotal += it.discount;
       taxTotal += tax;
     }
 
-    const grandTotal = Math.max(subtotal - discountTotal + taxTotal, 0);
-    return { subtotal, discountTotal, taxTotal, grandTotal };
+    return {
+      subtotal,
+      discountTotal,
+      taxTotal,
+      grandTotal: subtotal - discountTotal + taxTotal,
+    };
   }, [items]);
 
-  const addItem = () => {
-    setItems((prev) => [
-      ...prev,
-      { name: "", qty: 1, rate: 0, taxPercent: 0, discount: 0 },
-    ]);
-  };
-
-  const removeItem = (index) => {
-    setItems((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const updateItem = (index, key, value) => {
-    setItems((prev) =>
-      prev.map((it, i) => (i === index ? { ...it, [key]: value } : it))
-    );
-  };
-
+  /* =========================================================
+     🔐 ENSURE PROFILE (TOKEN BASED)
+     ========================================================= */
   const ensureProfileExists = async () => {
-    try {
-      const profileRes = await fetch(
-        "https://paychase-backend.onrender.com/api/profile/exists",
-        { credentials: "include" }
-      );
+    const res = await authFetch(
+      "https://paychase-backend.onrender.com/api/profile/exists"
+    );
 
-      if (profileRes.status === 401) {
-        showPopup({
-          title: "Session expired",
-          message: "Your login session has expired. Please login again.",
-          primaryText: "Go to Login",
-          onPrimary: () => navigate("/login", { replace: true }),
-        });
-        return false;
-      }
-
-      const profileData = await profileRes.json().catch(() => null);
-
-      if (!profileRes.ok) {
-        showPopup({
-          title: "Error",
-          message:
-            profileData?.error ||
-            profileData?.message ||
-            "Failed to verify business profile",
-          primaryText: "OK",
-          onPrimary: closePopup,
-        });
-        return false;
-      }
-
-      if (!profileData?.exists) {
-        showPopup({
-          title: "Business Profile required",
-          message:
-            "Please create your Business Profile first to generate invoices.",
-          primaryText: "Create Profile",
-          secondaryText: "Cancel",
-          onPrimary: () => navigate("/business-profile"),
-          onSecondary: closePopup,
-        });
-        return false;
-      }
-
-      return true;
-    } catch (err) {
-      console.log(err);
+    if (res.status === 401) {
       showPopup({
-        title: "Server Error",
-        message: "Server error while checking business profile",
-        primaryText: "OK",
-        onPrimary: closePopup,
+        title: "Session expired",
+        message: "Please login again.",
+        onPrimary: () => navigate("/login", { replace: true }),
       });
       return false;
     }
-  };
 
-  const handleRewriteWithAI = async () => {
-    const namedItems = items.filter((it) => String(it.name || "").trim());
-    if (namedItems.length === 0) {
+    const data = await res.json();
+    if (!data.exists) {
       showPopup({
-        title: "Add item names",
-        message: "Please add at least one item name, then click Rewrite with AI.",
-        primaryText: "OK",
-        onPrimary: closePopup,
+        title: "Business Profile Required",
+        message: "Create your business profile first.",
+        primaryText: "Create Profile",
+        onPrimary: () => navigate("/business-profile"),
       });
-      return;
+      return false;
     }
 
+    return true;
+  };
+
+  /* =========================================================
+     🤖 AI REWRITE (TOKEN BASED)
+     ========================================================= */
+  const handleRewriteWithAI = async () => {
     const ok = await ensureProfileExists();
     if (!ok) return;
 
     setRewriteLoading(true);
     try {
-      const res = await fetch("https://paychase-backend.onrender.com/api/rewrite/rewrite-items", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          clientName: client.name || "",
-          currency: currency.code,
-          items,
-        }),
-      });
+      const res = await authFetch(
+        "https://paychase-backend.onrender.com/api/rewrite/rewrite-items",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            clientName: client.name,
+            currency: currency.code,
+            items,
+          }),
+        }
+      );
 
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        showPopup({
-          title: "Rewrite failed",
-          message: data?.error || "Could not rewrite items",
-          primaryText: "OK",
-          onPrimary: closePopup,
-        });
-        return;
-      }
+      if (res.status === 401) return navigate("/login");
 
-      if (Array.isArray(data?.items)) setItems(data.items);
-
-      showPopup({
-        title: "Rewritten ✅",
-        message:
-          "We improved your item names to look more professional and dispute-proof. Please review and edit if needed.",
-        primaryText: "OK",
-        onPrimary: closePopup,
-      });
-    } catch (err) {
-      console.log(err);
-      showPopup({
-        title: "Server Error",
-        message: "AI rewrite failed. Server error / CORS issue.",
-        primaryText: "OK",
-        onPrimary: closePopup,
-      });
+      const data = await res.json();
+      if (Array.isArray(data.items)) setItems(data.items);
+    } catch (e) {
+      console.error(e);
     } finally {
       setRewriteLoading(false);
     }
   };
 
+  /* =========================================================
+     💾 SUBMIT DOCUMENT (TOKEN BASED)
+     ========================================================= */
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const ok = await ensureProfileExists();
     if (!ok) return;
 
-    if (!client.name.trim())
-      return showPopup({
-        title: "Missing",
-        message: "Client name is required",
-        primaryText: "OK",
-        onPrimary: closePopup,
-      });
-
-    if (items.length === 0)
-      return showPopup({
-        title: "Missing",
-        message: "Add at least 1 item",
-        primaryText: "OK",
-        onPrimary: closePopup,
-      });
-
-    if (items.some((it) => !it.name.trim()))
-      return showPopup({
-        title: "Missing",
-        message: "All items need a name",
-        primaryText: "OK",
-        onPrimary: closePopup,
-      });
-
     setLoading(true);
-
     try {
-      const res = await fetch("https://paychase-backend.onrender.com/api/documents", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          type: "INVOICE",
-          issueDate,
-          dueDate: dueDate || null,
-          currency,
-          client,
-          items,
-          notes,
-          terms,
-        }),
-      });
+      const res = await authFetch(
+        "https://paychase-backend.onrender.com/api/documents",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            type: "INVOICE",
+            issueDate,
+            dueDate: dueDate || null,
+            currency,
+            client,
+            items,
+            notes,
+            terms,
+          }),
+        }
+      );
 
-      const data = await res.json().catch(() => null);
+      if (res.status === 401) return navigate("/login");
 
-      if (!res.ok) {
-        showPopup({
-          title: "Failed",
-          message: data?.error || data?.message || "Failed to create invoice",
-          primaryText: "OK",
-          onPrimary: closePopup,
-        });
-        return;
-      }
-
-      const docId = data?.document?._id;
-      if (!docId) {
-        showPopup({
-          title: "Error",
-          message: "Invoice created but no ID received",
-          primaryText: "OK",
-          onPrimary: closePopup,
-        });
-        return;
-      }
-
-      navigate(`/documents/${docId}/ready`);
-    } catch (err) {
-      console.log(err);
-      showPopup({
-        title: "Server Error",
-        message: "Server error / CORS issue",
-        primaryText: "OK",
-        onPrimary: closePopup,
-      });
+      const data = await res.json();
+      navigate(`/documents/${data.document._id}/ready`);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }

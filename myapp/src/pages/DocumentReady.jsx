@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { authFetch } from "../../utils/authFetch";
 
 function symbolOf(doc) {
   return doc?.currency?.symbol || "₹";
@@ -13,26 +14,33 @@ export default function DocumentReady() {
   const [loadingDoc, setLoadingDoc] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
+  /* ================= FETCH DOCUMENT ================= */
   useEffect(() => {
     let isMounted = true;
 
     (async () => {
       try {
-        const res = await fetch(
+        const res = await authFetch(
           `https://paychase-backend.onrender.com/api/documents/${id}`,
-          { credentials: "include" }
+          { method: "GET" }
         );
 
-        const data = await res.json().catch(() => null);
-
-        if (!res.ok) {
-          alert(data?.error || data?.message || "Failed to load invoice");
+        // ✅ HANDLE SESSION EXPIRED
+        if (res.status === 401) {
+          navigate("/login", { replace: true });
           return;
         }
 
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          alert(data?.error || "Failed to load invoice");
+          return;
+        }
+
+        const data = await res.json();
         if (isMounted) setDoc(data.document);
       } catch {
-        alert("Server error / CORS issue");
+        alert("Server error");
       } finally {
         if (isMounted) setLoadingDoc(false);
       }
@@ -41,19 +49,25 @@ export default function DocumentReady() {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [id, navigate]);
 
+  /* ================= DOWNLOAD PDF ================= */
   const downloadPdf = async () => {
     setDownloading(true);
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `https://paychase-backend.onrender.com/api/documents/${id}/pdf`,
-        { credentials: "include" }
+        { method: "GET" }
       );
 
+      // ✅ HANDLE SESSION EXPIRED
+      if (res.status === 401) {
+        navigate("/login", { replace: true });
+        return;
+      }
+
       if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        alert(data?.error || data?.message || "Failed to download PDF");
+        alert("Failed to download PDF");
         return;
       }
 
@@ -73,9 +87,10 @@ export default function DocumentReady() {
     }
   };
 
+  /* ================= UI STATES ================= */
   if (loadingDoc) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-600">Loading…</div>
       </div>
     );
@@ -83,7 +98,7 @@ export default function DocumentReady() {
 
   if (!doc) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-600">Invoice not found</div>
       </div>
     );
