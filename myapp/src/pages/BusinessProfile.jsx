@@ -11,7 +11,6 @@ import {
   FileText,
   X,
 } from "lucide-react";
-import { authFetch } from "../../utils/authFetch";
 
 export default function BusinessProfile() {
   const navigate = useNavigate();
@@ -94,64 +93,42 @@ export default function BusinessProfile() {
       : { show: true, ok: false, msg: "Invalid GSTIN format." };
   }, [formData.gstin]);
 
- const handleSubmit = async (e) => {
-  e.preventDefault();
-
-  if (gstinInfo.show && !gstinInfo.ok) {
-    showPopup({ title: "Invalid GSTIN", message: gstinInfo.msg });
-    return;
-  }
-
-  setLoading(true);
-  try {
-    const fd = new FormData();
-    Object.entries(formData).forEach(([k, v]) => fd.append(k, v));
-    if (logoFile) fd.append("logo", logoFile);
-
-    const res = await authFetch(
-      "https://paychase-backend.onrender.com/api/profile",
-      {
-        method: "PUT",
-        body: fd,
-      }
-    );
-
-    // ✅ SESSION EXPIRED HANDLING
-    if (res.status === 401) {
-      showPopup({
-        title: "Session expired",
-        message: "Please login again.",
-        primaryText: "Go to Login",
-        onPrimary: () => navigate("/login", { replace: true }),
-      });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (gstinInfo.show && !gstinInfo.ok) {
+      showPopup({ title: "Invalid GSTIN", message: gstinInfo.msg });
       return;
     }
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => null);
+    setLoading(true);
+    try {
+      const fd = new FormData();
+      Object.entries(formData).forEach(([k, v]) => fd.append(k, v));
+      if (logoFile) fd.append("logo", logoFile);
+
+      const res = await fetch("https://paychase-backend.onrender.com/api/profile", {
+        method: "PUT",
+        credentials: "include",
+        body: fd,
+      });
+
+      if (!res.ok) throw new Error("Failed");
+
+      showPopup({
+        title: "Saved ✅",
+        message: "Business profile saved successfully.",
+        primaryText: "Create Invoice",
+        onPrimary: () => navigate("/document"),
+      });
+    } catch {
       showPopup({
         title: "Error",
-        message: data?.error || "Failed to save profile",
+        message: "Server error / CORS issue",
       });
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    showPopup({
-      title: "Saved ✅",
-      message: "Business profile saved successfully.",
-      primaryText: "Create Invoice",
-      onPrimary: () => navigate("/document"),
-    });
-  } catch {
-    showPopup({
-      title: "Error",
-      message: "Server error",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   const tips = [
     "Upload a clear square logo.",
@@ -161,16 +138,7 @@ export default function BusinessProfile() {
 
   return (
     <>
-      <Popup
-              open={popup.open}
-              title={popup.title}
-              message={popup.message}
-              primaryText={popup.primaryText}
-              secondaryText={popup.secondaryText}
-              onPrimary={popup.onPrimary || closePopup}
-              onSecondary={popup.onSecondary || closePopup}
-              onClose={closePopup}
-            />
+      <Popup {...popup} onClose={closePopup} />
 
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-orange-50 px-4 py-8">
         <div className="max-w-6xl mx-auto">

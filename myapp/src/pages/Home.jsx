@@ -19,30 +19,18 @@ export default function Home() {
     return () => clearTimeout(t);
   }, []);
 
- const isUserLoggedIn = async () => {
+  const isUserLoggedIn = async () => {
   try {
-    // ✅ CHANGE: read token from localStorage
-    const token = localStorage.getItem("accessToken");
+    const res = await fetch("https://paychase-backend.onrender.com/api/auth/me", {
+      credentials: "include",
+    });
 
-    // ✅ CHANGE: if no token, redirect immediately
-    if (!token) {
+    if (res.status === 401) {
       navigate("/login");
       return;
     }
 
-    // ✅ CHANGE: send Authorization header
-    const res = await fetch(
-      "https://paychase-backend.onrender.com/api/auth/me",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
     if (!res.ok) {
-      // token expired / invalid
-      localStorage.removeItem("accessToken"); // ✅ cleanup
       navigate("/login");
       return;
     }
@@ -50,11 +38,9 @@ export default function Home() {
     // ✅ logged in
     navigate("/document");
   } catch (err) {
-    localStorage.removeItem("accessToken"); // ✅ safety
     navigate("/login");
   }
 };
-
 
 
   // ✅ Replace this with your own image later if you want:

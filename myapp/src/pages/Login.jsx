@@ -19,38 +19,33 @@ export default function Login() {
     }));
   };
 
- const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const res = await fetch(
-        "https://paychase-backend.onrender.com/api/auth/login",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          // ❌ cookies removed (mobile-safe)
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password,
-          }),
-        }
-      );
+      const res = await fetch("https://paychase-backend.onrender.com/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        alert(data?.error || "Login failed");
+        alert(data?.error || data?.message || "Login failed");
         return;
       }
 
-      // ✅ STORE JWT (FIX)
-      localStorage.setItem("accessToken", data.accessToken);
-      localStorage.setItem("user", JSON.stringify(data.user));
-
+      localStorage.setItem("wasLoggedIn", "true");
       navigate("/", { replace: true });
     } catch (err) {
-      alert("Server error");
+      console.log("Login error:", err);
+      alert("Server error / CORS issue");
     } finally {
       setLoading(false);
     }
