@@ -21,7 +21,7 @@ export default function Signup() {
     }));
   };
 
-  const handleSubmit = async (e) => {
+ const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
@@ -32,28 +32,33 @@ export default function Signup() {
     setLoading(true);
 
     try {
-      const res = await fetch("https://paychase-backend.onrender.com/api/auth/register", {  
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          username: formData.name,
-          email: formData.email,
-          password: formData.password,
-        }),
-      });
+      const res = await fetch(
+        "https://paychase-backend.onrender.com/api/auth/register",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: formData.name,
+            email: formData.email,
+            password: formData.password,
+          }),
+        }
+      );
 
-      const data = await res.json().catch(() => null);
+      const data = await res.json();
 
       if (!res.ok) {
-        alert(data?.error || data?.message || "Registration failed");
+        alert(data.error || "Signup failed");
         return;
       }
 
+      // ✅ AUTO LOGIN AFTER SIGNUP
+      localStorage.setItem("accessToken", data.accessToken);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
       navigate("/business-profile", { replace: true });
-    } catch (err) {
-      console.log("Signup error:", err);
-      alert("Server error / CORS issue");
+    } catch {
+      alert("Server error");
     } finally {
       setLoading(false);
     }

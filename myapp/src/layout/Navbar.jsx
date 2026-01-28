@@ -66,6 +66,13 @@ export default function Navbar() {
     setOpenUserMenu(false);
   };
 
+  const logout = () => {
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("user");
+  window.location.href = "/login";
+};
+
+
   const fetchMe = async () => {
   try {
     setLoadingUser(true);
@@ -117,20 +124,7 @@ export default function Navbar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
- const handleLogout = async () => {
-  try {
-    await fetch("https://paychase-backend.onrender.com/api/auth/logout", {
-      method: "POST",
-      credentials: "include",
-    });
-  } finally {
-    localStorage.removeItem("wasLoggedIn"); // ✅ important
-    setUser(null);
-    setOpenUserMenu(false);
-    setIsMobileMenuOpen(false);
-    navigate("/login", { replace: true });
-  }
-};
+ 
 
 
   const displayName = user?.username || user?.email || "Account";
@@ -202,7 +196,7 @@ export default function Navbar() {
                   {openUserMenu && (
                     <div className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow-md overflow-hidden">
                       <button
-                        onClick={handleLogout}
+                        onClick={logout}
                         className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
                       >
                         Logout
