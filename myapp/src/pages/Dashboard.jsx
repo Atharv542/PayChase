@@ -70,7 +70,7 @@ export default function Dashboard() {
       try {
         setLoadingList(true);
         const res = await fetch(
-          `https://paychase-backend.onrender.com/api/documents?status=${filter}`,
+          `https://paychase-wsds.onrender.com/api/documents?status=${filter}`,
           { credentials: "include" }
         );
         const data = await res.json();

@@ -32,7 +32,7 @@ export default function Signup() {
     setLoading(true);
 
     try {
-      const res = await fetch("https://paychase-backend.onrender.com/api/auth/register", {
+      const res = await fetch("https://paychase-wsds.onrender.com/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

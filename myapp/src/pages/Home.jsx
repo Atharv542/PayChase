@@ -21,7 +21,7 @@ export default function Home() {
 
   const isUserLoggedIn = async () => {
   try {
-    const res = await fetch("https://paychase-backend.onrender.com/api/auth/me", {
+    const res = await fetch("https://paychase-wsds.onrender.com/api/auth/me", {
       credentials: "include",
     });
 

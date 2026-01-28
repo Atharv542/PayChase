@@ -150,7 +150,7 @@ export default function CreateDocument() {
   const ensureProfileExists = async () => {
     try {
       const profileRes = await fetch(
-        "https://paychase-backend.onrender.com/api/profile/exists",
+        "https://paychase-wsds.onrender.com/api/profile/exists",
         { credentials: "include" }
       );
 
@@ -222,7 +222,7 @@ export default function CreateDocument() {
 
     setRewriteLoading(true);
     try {
-      const res = await fetch("https://paychase-backend.onrender.com/api/rewrite/rewrite-items", {
+      const res = await fetch("https://paychase-wsds.onrender.com/api/rewrite/rewrite-items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -299,7 +299,7 @@ export default function CreateDocument() {
     setLoading(true);
 
     try {
-      const res = await fetch("https://paychase-backend.onrender.com/api/documents", {
+      const res = await fetch("https://paychase-wsds.onrender.com/api/documents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
