@@ -88,18 +88,20 @@ router.post("/login", async (req, res) => {
 ========================= */
 router.get("/me", async (req, res) => {
   try {
-    const auth = req.headers.authorization; // 🔴 CHANGED
-    if (!auth) {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({ error: "No token" });
     }
 
-    const token = auth.split(" ")[1]; // 🔴 CHANGED
-    const payload = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    const token = authHeader.split(" ")[1];
 
+    const payload = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
     return res.json({ user: payload });
   } catch {
-    return res.status(401).json({ error: "Access token expired or invalid" });
+    return res.status(401).json({ error: "Token expired or invalid" });
   }
 });
+
 
 module.exports = router;
