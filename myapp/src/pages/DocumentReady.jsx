@@ -19,7 +19,7 @@ export default function DocumentReady() {
     (async () => {
       try {
         const res = await fetch(
-          `https://paychase-wsds.onrender.com/api/documents/${id}`,
+          `https://paychase-backend.onrender.com/api/documents/${id}`,
           { credentials: "include" }
         );
 
@@ -47,7 +47,7 @@ export default function DocumentReady() {
     setDownloading(true);
     try {
       const res = await fetch(
-        `https://paychase-wsds.onrender.com/api/documents/${id}/pdf`,
+        `https://paychase-backend.onrender.com/api/documents/${id}/pdf`,
         { credentials: "include" }
       );
 

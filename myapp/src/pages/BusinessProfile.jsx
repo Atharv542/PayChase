@@ -106,7 +106,7 @@ export default function BusinessProfile() {
       Object.entries(formData).forEach(([k, v]) => fd.append(k, v));
       if (logoFile) fd.append("logo", logoFile);
 
-      const res = await fetch("https://paychase-wsds.onrender.com/api/profile", {
+      const res = await fetch("https://paychase-backend.onrender.com/api/profile", {
         method: "PUT",
         credentials: "include",
         body: fd,
