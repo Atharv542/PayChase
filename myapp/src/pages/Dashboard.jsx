@@ -50,6 +50,73 @@ const CURRENCY_OPTIONS = [
   { code: "GBP", symbol: "£", name: "British Pound" },
 ];
 
+// 🔹 Download invoice PDF
+const downloadInvoice = (doc) => {
+  window.open(
+    `https://paychase-backend.onrender.com/api/documents/${doc._id}/pdf`,
+    "_blank"
+  );
+};
+
+// 🔹 Generate reminder
+const generateReminder = async (doc) => {
+  try {
+    const res = await fetch(
+      `https://paychase-backend.onrender.com/api/ai/reminder/${doc._id}`,
+      { method: "POST", credentials: "include" }
+    );
+
+    const data = await res.json();
+    if (!res.ok) {
+      showPopup({ title: "Error", message: data?.error || "Failed to generate reminder" });
+      return;
+    }
+
+    showPopup({
+      title: "Reminder Message",
+      message: data.message,
+      primaryText: "Copy",
+      onPrimary: async () => {
+        await navigator.clipboard.writeText(data.message);
+        closePopup();
+      },
+    });
+  } catch {
+    showPopup({ title: "Error", message: "AI reminder failed" });
+  }
+};
+
+// 🔹 Toggle paid / pending
+const togglePaid = async (doc) => {
+  try {
+    const nextStatus = doc.status === "PAID" ? "PENDING" : "PAID";
+
+    const res = await fetch(
+      `https://paychase-backend.onrender.com/api/documents/${doc._id}/status`,
+      {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      }
+    );
+
+    const data = await res.json();
+    if (!res.ok) {
+      showPopup({ title: "Error", message: data?.error || "Failed to update status" });
+      return;
+    }
+
+    // 🔹 Update UI instantly
+    setDocuments((prev) =>
+      prev.map((d) => (d._id === doc._id ? data.document : d))
+    );
+  } catch {
+    showPopup({ title: "Error", message: "Status update failed" });
+  }
+};
+
+
 /* ---------- Dashboard ---------- */
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -205,19 +272,22 @@ export default function Dashboard() {
                         <div className="flex gap-2">
                           <button
                             className="p-2 rounded-lg border hover:bg-gray-50"
-                            title="Download"
+                            title="Download PDF"
+                            onClick={() => downloadInvoice(doc)}
                           >
                             <Download className="h-5 w-5" />
                           </button>
 
                           <button
                             className="p-2 rounded-lg border hover:bg-gray-50"
-                            title="Reminder"
+                            title="GenerateReminder"
+                            onClick={() => generateReminder(doc)}
                           >
                             <Bell className="h-5 w-5 text-emerald-600" />
                           </button>
 
-                          <button
+                          <button 
+                            onClick={() => togglePaid(doc)}
                             className="px-3 py-2 rounded-lg border font-semibold hover:bg-gray-50"
                           >
                             {doc.status === "PAID" ? "Paid" : "Mark Paid"}
