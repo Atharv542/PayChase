@@ -69,7 +69,7 @@ export default function Navbar() {
   const logout = () => {
   localStorage.removeItem("accessToken");
   localStorage.removeItem("user");
-  window.location.href = "/login";
+  navigate("/login", { replace: true });
 };
 
 
