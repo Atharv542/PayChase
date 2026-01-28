@@ -10,14 +10,14 @@ const isProd = process.env.RENDER === "true" || process.env.NODE_ENV === "produc
 
 const cookieOptionsAccess = {
   httpOnly: true,          // ✅ fixed
-  secure: isProd,
+  secure: true,
   sameSite:"none",
   maxAge: 15 * 60 * 1000,
 };
 
 const cookieOptionsRefresh = {
   httpOnly: true,
-  secure: isProd,
+  secure: true,
   sameSite: "none",
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
@@ -138,13 +138,13 @@ router.post("/logout", async (req, res) => {
 
    res.clearCookie("accessToken", {
   httpOnly: true,
-  secure: isProd,
+  secure: true,
   sameSite: "none",
 });
 
 res.clearCookie("refreshToken", {
   httpOnly: true,
-  secure: isProd,
+  secure: true,
   sameSite: "none",
 });
 
