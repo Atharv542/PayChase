@@ -68,31 +68,41 @@ export default function Navbar() {
 
   const fetchMe = async () => {
   try {
+    const justLoggedIn = sessionStorage.getItem("justLoggedIn");
     setLoadingUser(true);
 
     const res = await fetch("https://paychase-backend.onrender.com/api/auth/me", {
       credentials: "include",
     });
+if (res.status === 401) {
+  setUser(null);
 
-    if (res.status === 401) {
-      setUser(null);
+  // ✅ suppress popup immediately after login/signup (mobile fix)
+  if (justLoggedIn) {
+    sessionStorage.removeItem("justLoggedIn");
+    return;
+  }
 
-      // ✅ show popup ONLY if user had logged in before
-      const wasLoggedIn = localStorage.getItem("wasLoggedIn") === "true";
+  const wasLoggedIn = localStorage.getItem("wasLoggedIn") === "true";
 
-      if (wasLoggedIn && !shownSessionPopup.current && location.pathname !== "/login") {
-        shownSessionPopup.current = true;
+  if (
+    wasLoggedIn &&
+    !shownSessionPopup.current &&
+    location.pathname !== "/login"
+  ) {
+    shownSessionPopup.current = true;
 
-        showPopup({
-          title: "Session expired",
-          message: "Your login session expired. Please login again.",
-          primaryText: "Go to Login",
-          onPrimary: () => navigate("/login", { replace: true }),
-        });
-      }
+    showPopup({
+      title: "Session expired",
+      message: "Your login session expired. Please login again.",
+      primaryText: "Go to Login",
+      onPrimary: () => navigate("/login", { replace: true }),
+    });
+  }
 
-      return;
-    }
+  return;
+}
+
 
     if (!res.ok) {
       setUser(null);
@@ -104,6 +114,7 @@ export default function Navbar() {
 
     // ✅ if me works, user is logged in
     localStorage.setItem("wasLoggedIn", "true");
+    sessionStorage.removeItem("justLoggedIn");
   } catch {
     setUser(null);
   } finally {
@@ -111,11 +122,15 @@ export default function Navbar() {
   }
 };
 
+useEffect(() => {
+  fetchMe();
 
-  useEffect(() => {
-    fetchMe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
+  const onAuthChange = () => fetchMe();
+  window.addEventListener("auth-changed", onAuthChange);
+
+  return () => window.removeEventListener("auth-changed", onAuthChange);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
  const handleLogout = async () => {
   try {
