@@ -158,19 +158,14 @@ res.clearCookie("refreshToken", {
 // ME
 router.get("/me", async (req, res) => {
   try {
-    const header = req.headers.authorization;
-    if (!header || !header.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "No token" });
-    }
+    const accessToken = req.cookies.accessToken;
+    if (!accessToken) return res.status(401).json({ error: "No access token" });
 
-    const token = header.split(" ")[1];
-    const payload = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-
+    const payload = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
     return res.json({ user: payload });
   } catch {
-    return res.status(401).json({ error: "Invalid or expired token" });
+    return res.status(401).json({ error: "Access token expired or invalid" });
   }
 });
-
 
 module.exports = router;

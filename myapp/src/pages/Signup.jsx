@@ -21,57 +21,43 @@ export default function Signup() {
     }));
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  if (formData.password !== formData.confirmPassword) {
-    alert("Passwords do not match");
-    return;
-  }
+    if (formData.password !== formData.confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
 
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    const res = await fetch(
-      "https://paychase-backend.onrender.com/api/auth/register",
-      {
+    try {
+      const res = await fetch("https://paychase-backend.onrender.com/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // keep cookies for backend
+        credentials: "include",
         body: JSON.stringify({
           username: formData.name,
           email: formData.email,
           password: formData.password,
         }),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        alert(data?.error || data?.message || "Registration failed");
+        return;
       }
-    );
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data?.error || "Registration failed");
-      return;
+      navigate("/business-profile", { replace: true });
+    } catch (err) {
+      console.log("Signup error:", err);
+      alert("Server error / CORS issue");
+    } finally {
+      setLoading(false);
     }
-
-    // ✅ MOBILE-SAFE AUTH
-    localStorage.setItem("accessToken", data.accessToken);
-    localStorage.setItem("wasLoggedIn", "true");
-
-    // ❌ NO /me CALL
-    // ❌ NO delay
-    // ❌ NO justLoggedIn
-    // ❌ NO event dispatch
-
-    navigate("/business-profile", { replace: true });
-  } catch (err) {
-    console.error("Signup error:", err);
-    alert("Server error");
-  } finally {
-    setLoading(false);
-  }
-};
-
-
+  };
 
   const IMAGE_SRC =
     "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80";

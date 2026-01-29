@@ -66,33 +66,44 @@ export default function Navbar() {
     setOpenUserMenu(false);
   };
 
- const fetchMe = async () => {
+  const fetchMe = async () => {
   try {
     setLoadingUser(true);
 
-    const token = localStorage.getItem("accessToken");
-    if (!token) {
+    const res = await fetch("https://paychase-backend.onrender.com/api/auth/me", {
+      credentials: "include",
+    });
+
+    if (res.status === 401) {
       setUser(null);
+
+      // ✅ show popup ONLY if user had logged in before
+      const wasLoggedIn = localStorage.getItem("wasLoggedIn") === "true";
+
+      if (wasLoggedIn && !shownSessionPopup.current && location.pathname !== "/login") {
+        shownSessionPopup.current = true;
+
+        showPopup({
+          title: "Session expired",
+          message: "Your login session expired. Please login again.",
+          primaryText: "Go to Login",
+          onPrimary: () => navigate("/login", { replace: true }),
+        });
+      }
+
       return;
     }
 
-    const res = await fetch(
-      "https://paychase-backend.onrender.com/api/auth/me",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
     if (!res.ok) {
-      localStorage.removeItem("accessToken");
       setUser(null);
       return;
     }
 
     const data = await res.json();
-    setUser(data.user);
+    setUser(data.user || null);
+
+    // ✅ if me works, user is logged in
+    localStorage.setItem("wasLoggedIn", "true");
   } catch {
     setUser(null);
   } finally {
@@ -101,27 +112,25 @@ export default function Navbar() {
 };
 
 
-useEffect(() => {
-  fetchMe();
+  useEffect(() => {
+    fetchMe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
- 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
-
-const handleLogout = async () => {
+ const handleLogout = async () => {
   try {
     await fetch("https://paychase-backend.onrender.com/api/auth/logout", {
       method: "POST",
       credentials: "include",
     });
   } finally {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("wasLoggedIn");
+    localStorage.removeItem("wasLoggedIn"); // ✅ important
     setUser(null);
+    setOpenUserMenu(false);
+    setIsMobileMenuOpen(false);
     navigate("/login", { replace: true });
   }
 };
-
 
 
   const displayName = user?.username || user?.email || "Account";
