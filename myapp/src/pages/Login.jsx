@@ -19,37 +19,50 @@ export default function Login() {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      const res = await fetch("https://paychase-backend.onrender.com/api/auth/login", {
+  try {
+    const res = await fetch(
+      "https://paychase-backend.onrender.com/api/auth/login",
+      {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        credentials: "include", // keep cookies for backend
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
         }),
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        alert(data?.error || data?.message || "Login failed");
-        return;
       }
+    );
 
-      localStorage.setItem("wasLoggedIn", "true");
-      navigate("/", { replace: true });
-    } catch (err) {
-      console.log("Login error:", err);
-      alert("Server error / CORS issue");
-    } finally {
-      setLoading(false);
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data?.error || "Login failed");
+      return;
     }
-  };
+
+    // ✅ THIS IS THE KEY (mobile-safe)
+    localStorage.setItem("accessToken", data.accessToken);
+    localStorage.setItem("wasLoggedIn", "true");
+
+    // ❌ NO /me CALL HERE
+    // ❌ NO delay
+    // ❌ NO justLoggedIn
+    // ❌ NO double navigation
+
+    navigate("/", { replace: true });
+  } catch (err) {
+    console.error("Login error:", err);
+    alert("Server error");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   const IMAGE_SRC =
     "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1200&q=80";
