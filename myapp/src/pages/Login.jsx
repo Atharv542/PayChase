@@ -24,12 +24,13 @@ export default function Login() {
   setLoading(true);
 
   try {
+    // 1️⃣ Login request (sets cookie)
     const res = await fetch(
       "https://paychase-backend.onrender.com/api/auth/login",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // keep cookies for backend
+        credentials: "include",
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
@@ -37,31 +38,47 @@ export default function Login() {
       }
     );
 
-    const data = await res.json();
+    const data = await res.json().catch(() => null);
 
     if (!res.ok) {
-      alert(data?.error || "Login failed");
+      alert(data?.error || data?.message || "Login failed");
       return;
     }
 
-    // ✅ THIS IS THE KEY (mobile-safe)
-    localStorage.setItem("accessToken", data.accessToken);
+    // 2️⃣ IMPORTANT: verify cookie is usable (mobile fix)
+    let meRes = await fetch(
+      "https://paychase-backend.onrender.com/api/auth/me",
+      { credentials: "include" }
+    );
+
+    // 3️⃣ Mobile browsers need a small delay
+    if (!meRes.ok) {
+      await new Promise((r) => setTimeout(r, 300));
+
+      meRes = await fetch(
+        "https://paychase-backend.onrender.com/api/auth/me",
+        { credentials: "include" }
+      );
+
+      if (!meRes.ok) {
+        alert("Session could not be established. Please try again.");
+        return;
+      }
+    }
+
+    // 4️⃣ Mark just logged in (prevents navbar popup)
+    sessionStorage.setItem("justLoggedIn", "true");
     localStorage.setItem("wasLoggedIn", "true");
-
-    // ❌ NO /me CALL HERE
-    // ❌ NO delay
-    // ❌ NO justLoggedIn
-    // ❌ NO double navigation
-
+    window.dispatchEvent(new Event("auth-changed"));
+    // 5️⃣ NOW it is safe to navigate
     navigate("/", { replace: true });
   } catch (err) {
-    console.error("Login error:", err);
-    alert("Server error");
+    console.log("Login error:", err);
+    alert("Server error / CORS issue");
   } finally {
     setLoading(false);
   }
 };
-
 
 
   const IMAGE_SRC =
