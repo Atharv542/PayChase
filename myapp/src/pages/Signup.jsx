@@ -21,7 +21,7 @@ export default function Signup() {
     }));
   };
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
   e.preventDefault();
 
   if (formData.password !== formData.confirmPassword) {
@@ -32,13 +32,12 @@ export default function Signup() {
   setLoading(true);
 
   try {
-    // 1️⃣ Register
     const res = await fetch(
       "https://paychase-backend.onrender.com/api/auth/register",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        credentials: "include", // keep cookies for backend
         body: JSON.stringify({
           username: formData.name,
           email: formData.email,
@@ -47,48 +46,31 @@ export default function Signup() {
       }
     );
 
-    const data = await res.json().catch(() => null);
+    const data = await res.json();
 
     if (!res.ok) {
-      alert(data?.error || data?.message || "Registration failed");
+      alert(data?.error || "Registration failed");
       return;
     }
 
-    // 2️⃣ Verify session (mobile fix)
-    let meRes = await fetch(
-      "https://paychase-backend.onrender.com/api/auth/me",
-      { credentials: "include" }
-    );
-
-    if (!meRes.ok) {
-      // mobile browsers need a moment
-      await new Promise((r) => setTimeout(r, 300));
-
-      meRes = await fetch(
-        "https://paychase-backend.onrender.com/api/auth/me",
-        { credentials: "include" }
-      );
-
-      if (!meRes.ok) {
-        alert("Session could not be established. Please login.");
-        navigate("/login", { replace: true });
-        return;
-      }
-    }
-
-    // 3️⃣ Prevent navbar popup
-    sessionStorage.setItem("justLoggedIn", "true");
+    // ✅ MOBILE-SAFE AUTH
+    localStorage.setItem("accessToken", data.accessToken);
     localStorage.setItem("wasLoggedIn", "true");
-    window.dispatchEvent(new Event("auth-changed"));
-    // 4️⃣ Safe redirect
+
+    // ❌ NO /me CALL
+    // ❌ NO delay
+    // ❌ NO justLoggedIn
+    // ❌ NO event dispatch
+
     navigate("/business-profile", { replace: true });
   } catch (err) {
-    console.log("Signup error:", err);
-    alert("Server error / CORS issue");
+    console.error("Signup error:", err);
+    alert("Server error");
   } finally {
     setLoading(false);
   }
 };
+
 
 
   const IMAGE_SRC =
