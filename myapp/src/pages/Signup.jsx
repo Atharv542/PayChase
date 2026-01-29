@@ -79,7 +79,7 @@ export default function Signup() {
     // 3️⃣ Prevent navbar popup
     sessionStorage.setItem("justLoggedIn", "true");
     localStorage.setItem("wasLoggedIn", "true");
-
+    window.dispatchEvent(new Event("auth-changed"));
     // 4️⃣ Safe redirect
     navigate("/business-profile", { replace: true });
   } catch (err) {

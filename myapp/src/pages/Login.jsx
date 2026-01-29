@@ -69,7 +69,7 @@ export default function Login() {
     // 4️⃣ Mark just logged in (prevents navbar popup)
     sessionStorage.setItem("justLoggedIn", "true");
     localStorage.setItem("wasLoggedIn", "true");
-
+    window.dispatchEvent(new Event("auth-changed"));
     // 5️⃣ NOW it is safe to navigate
     navigate("/", { replace: true });
   } catch (err) {
