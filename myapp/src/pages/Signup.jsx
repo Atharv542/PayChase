@@ -22,20 +22,17 @@ export default function Signup() {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (formData.password !== formData.confirmPassword) {
-    alert("Passwords do not match");
-    return;
-  }
+    if (formData.password !== formData.confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
 
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    // 1️⃣ Register
-    const res = await fetch(
-      "https://paychase-backend.onrender.com/api/auth/register",
-      {
+    try {
+      const res = await fetch("https://paychase-backend.onrender.com/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -44,52 +41,23 @@ export default function Signup() {
           email: formData.email,
           password: formData.password,
         }),
-      }
-    );
+      });
 
-    const data = await res.json().catch(() => null);
+      const data = await res.json().catch(() => null);
 
-    if (!res.ok) {
-      alert(data?.error || data?.message || "Registration failed");
-      return;
-    }
-
-    // 2️⃣ Verify session (mobile fix)
-    let meRes = await fetch(
-      "https://paychase-backend.onrender.com/api/auth/me",
-      { credentials: "include" }
-    );
-
-    if (!meRes.ok) {
-      // mobile browsers need a moment
-      await new Promise((r) => setTimeout(r, 300));
-
-      meRes = await fetch(
-        "https://paychase-backend.onrender.com/api/auth/me",
-        { credentials: "include" }
-      );
-
-      if (!meRes.ok) {
-        alert("Session could not be established. Please login.");
-        navigate("/login", { replace: true });
+      if (!res.ok) {
+        alert(data?.error || data?.message || "Registration failed");
         return;
       }
+
+      navigate("/business-profile", { replace: true });
+    } catch (err) {
+      console.log("Signup error:", err);
+      alert("Server error / CORS issue");
+    } finally {
+      setLoading(false);
     }
-
-    // 3️⃣ Prevent navbar popup
-    sessionStorage.setItem("justLoggedIn", "true");
-    localStorage.setItem("wasLoggedIn", "true");
-    window.dispatchEvent(new Event("auth-changed"));
-    // 4️⃣ Safe redirect
-    navigate("/business-profile", { replace: true });
-  } catch (err) {
-    console.log("Signup error:", err);
-    alert("Server error / CORS issue");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   const IMAGE_SRC =
     "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80";

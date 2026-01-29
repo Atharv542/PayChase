@@ -19,15 +19,12 @@ export default function Login() {
     }));
   };
 
- const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
 
-  try {
-    // 1️⃣ Login request (sets cookie)
-    const res = await fetch(
-      "https://paychase-backend.onrender.com/api/auth/login",
-      {
+    try {
+      const res = await fetch("https://paychase-backend.onrender.com/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -35,51 +32,24 @@ export default function Login() {
           email: formData.email,
           password: formData.password,
         }),
-      }
-    );
+      });
 
-    const data = await res.json().catch(() => null);
+      const data = await res.json().catch(() => null);
 
-    if (!res.ok) {
-      alert(data?.error || data?.message || "Login failed");
-      return;
-    }
-
-    // 2️⃣ IMPORTANT: verify cookie is usable (mobile fix)
-    let meRes = await fetch(
-      "https://paychase-backend.onrender.com/api/auth/me",
-      { credentials: "include" }
-    );
-
-    // 3️⃣ Mobile browsers need a small delay
-    if (!meRes.ok) {
-      await new Promise((r) => setTimeout(r, 300));
-
-      meRes = await fetch(
-        "https://paychase-backend.onrender.com/api/auth/me",
-        { credentials: "include" }
-      );
-
-      if (!meRes.ok) {
-        alert("Session could not be established. Please try again.");
+      if (!res.ok) {
+        alert(data?.error || data?.message || "Login failed");
         return;
       }
+
+      localStorage.setItem("wasLoggedIn", "true");
+      navigate("/", { replace: true });
+    } catch (err) {
+      console.log("Login error:", err);
+      alert("Server error / CORS issue");
+    } finally {
+      setLoading(false);
     }
-
-    // 4️⃣ Mark just logged in (prevents navbar popup)
-    sessionStorage.setItem("justLoggedIn", "true");
-    localStorage.setItem("wasLoggedIn", "true");
-    window.dispatchEvent(new Event("auth-changed"));
-    // 5️⃣ NOW it is safe to navigate
-    navigate("/", { replace: true });
-  } catch (err) {
-    console.log("Login error:", err);
-    alert("Server error / CORS issue");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   const IMAGE_SRC =
     "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1200&q=80";
