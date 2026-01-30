@@ -5,7 +5,7 @@ import Navbar from "./layout/Navbar";
 import Footer from "./layout/Footer";
 
 import Home from "./pages/Home";
-import InvoiceCreation from "./pages/InvoiceCreation";
+
 import Dashboard from "./pages/Dashboard";
 import Pricing from "./pages/Pricing";
 import Login from "./pages/Login";
@@ -38,7 +38,7 @@ function App() {
       <main className="flex-1">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/invoice-creation" element={<InvoiceCreation />} />
+         
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/login" element={<Login />} />
