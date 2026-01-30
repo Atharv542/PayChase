@@ -277,7 +277,6 @@ export default function BusinessProfile() {
   );
 }
 
-/* ---------- Small Reusable Inputs ---------- */
 
 function Input({ icon: Icon, label, ...props }) {
   return (

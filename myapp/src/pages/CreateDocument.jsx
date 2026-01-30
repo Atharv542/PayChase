@@ -443,6 +443,8 @@ export default function CreateDocument() {
                   <input
                     type="date"
                     value={dueDate}
+                    min={issueDate}
+                    required
                     onChange={(e) => setDueDate(e.target.value)}
                     className="w-full text-sm sm:text-base border rounded-lg sm:rounded-xl px-2.5 sm:px-3 py-2 sm:py-2.5 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
                   />
