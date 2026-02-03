@@ -21,12 +21,10 @@ const documentSchema = new mongoose.Schema(
       index: true,
     },
 
-    // ✅ invoice only
     type: { type: String, default: "INVOICE", immutable: true },
 
     documentNumber: { type: String, required: true, trim: true, index: true },
 
-    // ✅ Currency stored with invoice (so PDF uses same currency later)
     currency: {
       code: { type: String, default: "INR", trim: true },
       symbol: { type: String, default: "₹", trim: true },
@@ -58,7 +56,7 @@ const documentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ✅ avoid duplicates per user
+//  avoids duplicates per user
 documentSchema.index({ ownerId: 1, documentNumber: 1 }, { unique: true });
 
 module.exports = mongoose.model("Document", documentSchema);

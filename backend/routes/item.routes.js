@@ -25,7 +25,7 @@ router.post('/',requireAuth,async(req,res)=>{
      }
 })
 
-//show all items for logged in users
+
 
 router.get('/',requireAuth,async(req,res)=>{
     try{

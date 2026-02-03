@@ -4,9 +4,6 @@ const groq = require("../utils/groqClient");
 
 const router = express.Router();
 
-/**
- * Strong JSON parse (removes markdown fences + trailing commas).
- */
 function safeJsonParse(text) {
   if (!text) return null;
 
@@ -88,7 +85,6 @@ router.post("/rewrite-items", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Items are required" });
     }
 
-    // keep only safe fields
     const compactItems = items.map((it) => ({
       name: String(it?.name || "").trim(),
       qty: Number(it?.qty || 1),
@@ -112,7 +108,6 @@ router.post("/rewrite-items", requireAuth, async (req, res) => {
       ],
       temperature: 0.2,
       max_tokens: 500,
-      // If your groq-sdk supports it, keep it:
       response_format: { type: "json_object" },
     });
 
@@ -126,7 +121,6 @@ router.post("/rewrite-items", requireAuth, async (req, res) => {
       });
     }
 
-    // Build rewrite map
     const rewrites = new Map();
     for (const row of parsed.items) {
       const idx = Number(row?.index);
@@ -136,7 +130,7 @@ router.post("/rewrite-items", requireAuth, async (req, res) => {
       }
     }
 
-    // Apply rewrites
+
     const updated = items.map((it, i) => ({
       ...it,
       name: rewrites.get(i) || it.name,

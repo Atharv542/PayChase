@@ -11,9 +11,6 @@ function escapeHtml(str = "") {
     .replaceAll("'", "&#039;");
 }
 
-/**
- * Currency-aware money formatter
- */
 function money(n, currency) {
   const num = Number(n || 0);
   const sym = currency?.symbol || "₹";
@@ -27,26 +24,24 @@ function buildInvoiceHTML(doc) {
 
   const currency =
     doc.currency || { code: "INR", symbol: "₹", name: "Indian Rupee" };
-  const sym = currency.symbol || "₹";
 
   const itemsRows = (doc.items || [])
     .map((it, idx) => {
       const base = (Number(it.qty) || 0) * (Number(it.rate) || 0);
       const discount = Number(it.discount || 0);
       const afterDiscount = Math.max(base - discount, 0);
-      const tax =
-        (afterDiscount * (Number(it.taxPercent || 0))) / 100;
+      const tax = (afterDiscount * (Number(it.taxPercent || 0))) / 100;
 
       return `
         <tr>
           <td class="muted">${idx + 1}</td>
           <td>
             <div class="item-name">${escapeHtml(it.name)}</div>
-            <div class="item-sub">
-              Qty ${Number(it.qty || 0)} •
-              Rate ${money(it.rate, currency)} •
-              Tax ${Number(it.taxPercent || 0)}% •
-              Disc ${money(it.discount || 0, currency)}
+            <div class="item-meta">
+              <span>Qty: ${Number(it.qty || 0)}</span>
+              <span>Rate: ${money(it.rate, currency)}</span>
+              <span>Tax: ${Number(it.taxPercent || 0)}%</span>
+              <span>Disc: ${money(it.discount || 0, currency)}</span>
             </div>
           </td>
           <td class="right">${Number(it.qty || 0)}</td>
@@ -69,296 +64,323 @@ function buildInvoiceHTML(doc) {
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <style>
-    @page { margin: 14mm 14mm; }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Inter, Arial, sans-serif;
-      color:#0f172a;
-      background:#fff;
-    }
-    .page { padding: 0; }
+<meta charset="utf-8" />
+<style>
+@page { margin: 14mm; }
+* { box-sizing: border-box; }
 
-    :root{
-      --accent:#2563eb;
-      --accentSoft:#eff6ff;
-      --accentText:#1e40af;
-    }
+body {
+  margin: 0;
+  font-family: Inter, Arial, sans-serif;
+  color: #0f172a;
+  background: #fff;
+}
 
-    ${/* ---- STYLES UNCHANGED ---- */""}
+:root {
+  --accent: #2563eb;
+  --accentSoft: #eff6ff;
+  --accentText: #1e40af;
+}
 
-    .top {
-      display:flex;
-      justify-content:space-between;
-      gap:18px;
-      padding:16px 0 10px;
-      border-bottom:3px solid var(--accentSoft);
-    }
+/* -------- PAGE LAYOUT -------- */
 
-    .company {
-      flex:1;
-      display:flex;
-      gap:14px;
-      align-items:flex-start;
-    }
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 
-    .logo {
-      width:62px;
-      height:62px;
-      border-radius:14px;
-      border:1px solid #e5e7eb;
-      background:#fff;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      overflow:hidden;
-    }
-    .logo img { width:100%; height:100%; object-fit:cover; }
+/* -------- HEADER -------- */
 
-    .company .name {
-      font-size:22px;
-      font-weight:900;
-    }
-    .company .meta {
-      margin-top:6px;
-      font-size:12px;
-      color:#64748b;
-      line-height:1.45;
-    }
+.top {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 20px;
+  border-bottom: 3px solid var(--accentSoft);
+}
 
-    .doccard {
-      width:310px;
-      border-radius:16px;
-      padding:14px 16px;
-      background:#f8fafc;
-      border:1px solid #e5e7eb;
-    }
+.company {
+  display: flex;
+  gap: 14px;
+}
 
-    .doc-title {
-      font-size:18px;
-      font-weight:1000;
-      letter-spacing:1px;
-    }
+.logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 22px;
+}
 
-    .doc-grid {
-      margin-top:10px;
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:8px 12px;
-      font-size:12px;
-    }
+.company .name {
+  font-size: 22px;
+  font-weight: 900;
+}
 
-    .doc-grid .k { font-size:11px; color:#64748b; }
-    .doc-grid .v { font-weight:800; }
+.company .meta {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.6;
+}
 
-    .row2 {
-      margin-top:16px;
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:14px;
-    }
+.doccard {
+  width: 320px;
+  border-radius: 16px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+}
 
-    .card {
-      background:#fff;
-      border:1px solid #e5e7eb;
-      border-radius:16px;
-      padding:18px;
-    }
+.doc-title {
+  font-size: 18px;
+  font-weight: 1000;
+  letter-spacing: 1px;
+}
 
-    .card h3 {
-      margin:0 0 10px;
-      font-size:12px;
-      text-transform:uppercase;
-      font-weight:900;
-      color:var(--accentText);
-    }
+.doc-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+  font-size: 12px;
+}
 
-    .muted { color:#64748b; font-size:12px; }
+.k {
+  font-size: 11px;
+  color: #64748b;
+}
 
-    .bigTotal {
-      font-size:26px;
-      font-weight:1000;
-      color:var(--accentText);
-    }
+.v {
+  font-weight: 800;
+}
 
-    .table-wrap {
-      margin-top:16px;
-      border-radius:16px;
-      overflow:hidden;
-      border:1px solid #dbeafe;
-    }
+/* -------- TABLE -------- */
 
-    table { width:100%; border-collapse:collapse; }
+.table-wrap {
+  margin-top: 26px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #dbeafe;
+  flex-grow: 1;
+}
 
-    thead th {
-      padding:14px;
-      font-size:11px;
-      background:var(--accentSoft);
-      color:var(--accentText);
-    }
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
 
-    tbody td {
-      padding:14px;
-      font-size:12.5px;
-      border-bottom:1px solid #eef2f7;
-    }
+thead th {
+  padding: 14px;
+  font-size: 11px;
+  background: var(--accentSoft);
+  color: var(--accentText);
+}
 
-    .right { text-align:right; }
-    .strong { font-weight:900; }
+tbody td {
+  padding: 18px 14px;
+  font-size: 12.5px;
+  vertical-align: top;
+  border-bottom: 1px solid #eef2f7;
+}
 
-    .bottom {
-      margin-top:16px;
-      display:grid;
-      grid-template-columns:1fr 360px;
-      gap:14px;
-    }
+tbody tr:nth-child(even) {
+  background: #fafcff;
+}
 
-    .totals {
-      border:1px solid #dbeafe;
-      border-radius:16px;
-      padding:18px;
-    }
+.right { text-align: right; }
+.strong { font-weight: 900; }
+.muted { color: #64748b; }
 
-    .totals .r {
-      display:flex;
-      justify-content:space-between;
-      padding:8px 0;
-    }
+/* -------- ITEM META -------- */
 
-    .grand {
-      margin-top:10px;
-      background:var(--accent);
-      color:#fff;
-      border-radius:14px;
-      padding:12px;
-      font-weight:1000;
-      display:flex;
-      justify-content:space-between;
-    }
+.item-name {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
 
-    .footer {
-      margin-top:14px;
-      display:flex;
-      justify-content:space-between;
-      font-size:11px;
-      color:#94a3b8;
-    }
+.item-meta {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 4px 18px;
+  font-size: 11px;
+  color: #64748b;
+}
 
-    .badge {
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid #e5e7eb;
-      font-weight:800;
-    }
-  </style>
+/* -------- BOTTOM -------- */
+
+.bottom {
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 18px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.card h3 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  font-weight: 900;
+  color: var(--accentText);
+}
+
+.card p {
+  font-size: 12.5px;
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+
+.totals {
+  border: 1px solid #dbeafe;
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.totals .r {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  font-size: 13px;
+}
+
+.grand {
+  margin-top: 16px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-weight: 1000;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* -------- FOOTER -------- */
+
+.footer {
+  margin-top: 26px;
+  padding-top: 10px;
+  border-top: 1px dashed #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  font-weight: 800;
+}
+</style>
 </head>
 
 <body>
-  <div class="page">
+<div class="page">
 
-    <!-- HEADER -->
-    <div class="top">
-      <div class="company">
-        <div class="logo">
-          ${
-            doc.seller.logoUrl
-              ? `<img src="${escapeHtml(doc.seller.logoUrl)}" />`
-              : `<div style="font-weight:900;font-size:22px">
-                  ${escapeHtml(
-                    (doc.seller.companyName || "B")
-                      .slice(0, 1)
-                      .toUpperCase()
-                  )}
-                </div>`
-          }
-        </div>
-
-        <div>
-          <div class="name">${escapeHtml(
-            doc.seller.companyName || "Your Business"
-          )}</div>
-          <div class="meta">
-            ${doc.seller.gstin ? `GSTIN: ${escapeHtml(doc.seller.gstin)}<br/>` : ""}
-            ${escapeHtml(doc.seller.address || "")}<br/>
-            ${escapeHtml(doc.seller.phone || "")}
-            ${doc.seller.email ? ` • ${escapeHtml(doc.seller.email)}` : ""}
-          </div>
-        </div>
+  <div class="top">
+    <div class="company">
+      <div class="logo">
+        ${
+          doc.seller.logoUrl
+            ? `<img src="${escapeHtml(doc.seller.logoUrl)}" style="width:100%;height:100%;object-fit:cover" />`
+            : escapeHtml((doc.seller.companyName || "B")[0])
+        }
       </div>
-
-      <div class="doccard">
-        <div class="doc-title">${title}</div>
-        <div class="doc-grid">
-          <div><div class="k">Number</div><div class="v">${escapeHtml(doc.documentNumber)}</div></div>
-          <div><div class="k">Issue Date</div><div class="v">${escapeHtml(doc.issueDate)}</div></div>
-          <div><div class="k">Due Date</div><div class="v">${escapeHtml(doc.dueDate || "-")}</div></div>
-          <div><div class="k">Currency</div><div class="v">${escapeHtml(currency.code)} (${escapeHtml(sym)})</div></div>
+      <div>
+        <div class="name">${escapeHtml(doc.seller.companyName || "Your Business")}</div>
+        <div class="meta">
+          ${doc.seller.gstin ? `GSTIN: ${escapeHtml(doc.seller.gstin)}<br/>` : ""}
+          ${escapeHtml(doc.seller.address || "")}<br/>
+          ${escapeHtml(doc.seller.phone || "")}
+          ${doc.seller.email ? ` • ${escapeHtml(doc.seller.email)}` : ""}
         </div>
       </div>
     </div>
 
-    <!-- TABLE -->
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>#</th><th>Item</th><th class="right">Qty</th>
-            <th class="right">Rate</th><th class="right">Tax</th>
-            <th class="right">Disc</th><th class="right">Total</th>
-          </tr>
-        </thead>
-        <tbody>${itemsRows}</tbody>
-      </table>
-    </div>
-
-    <!-- TOTALS -->
-    <div class="bottom">
-      <div class="card">
-        <h3>Notes</h3>
-        <p>${escapeHtml(doc.notes || "—")}</p>
-        <h3>Terms</h3>
-        <p>${escapeHtml(resolvedTerms)}</p>
-      </div>
-
-      <div class="totals">
-        <div class="r"><span>Subtotal</span><b>${money(doc.subtotal, currency)}</b></div>
-        <div class="r"><span>Discount</span><b>- ${money(doc.discountTotal, currency)}</b></div>
-        <div class="r"><span>Tax</span><b>${money(doc.taxTotal, currency)}</b></div>
-        <div class="grand"><span>Grand Total</span><span>${money(doc.grandTotal, currency)}</span></div>
+    <div class="doccard">
+      <div class="doc-title">${title}</div>
+      <div class="doc-grid">
+        <div><div class="k">Number</div><div class="v">${escapeHtml(doc.documentNumber)}</div></div>
+        <div><div class="k">Issue Date</div><div class="v">${escapeHtml(doc.issueDate)}</div></div>
+        <div><div class="k">Due Date</div><div class="v">${escapeHtml(doc.dueDate || "-")}</div></div>
+        <div><div class="k">Currency</div><div class="v">${currency.code} (${currency.symbol})</div></div>
       </div>
     </div>
-
-    <div class="footer">
-      <div class="badge">Generated by PayChase</div>
-      <div>${title} • ${escapeHtml(doc.documentNumber)}</div>
-    </div>
-
   </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Item</th>
+          <th class="right">Qty</th>
+          <th class="right">Rate</th>
+          <th class="right">Tax</th>
+          <th class="right">Disc</th>
+          <th class="right">Total</th>
+        </tr>
+      </thead>
+      <tbody>${itemsRows}</tbody>
+    </table>
+  </div>
+
+  <div class="bottom">
+    <div class="card">
+      <h3>Notes</h3>
+      <p>${escapeHtml(doc.notes || "—")}</p>
+      <h3>Terms</h3>
+      <p>${escapeHtml(resolvedTerms)}</p>
+    </div>
+
+    <div class="totals">
+      <div class="r"><span>Subtotal</span><b>${money(doc.subtotal, currency)}</b></div>
+      <div class="r"><span>Discount</span><b>- ${money(doc.discountTotal, currency)}</b></div>
+      <div class="r"><span>Tax</span><b>${money(doc.taxTotal, currency)}</b></div>
+      <div class="grand"><span>Grand Total</span><span>${money(doc.grandTotal, currency)}</span></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="badge">Generated by PayChase</div>
+    <div>${title} • ${escapeHtml(doc.documentNumber)}</div>
+  </div>
+
+</div>
 </body>
 </html>
 `;
 }
 
-/* -------------------- PDF GENERATOR (html-pdf-node) -------------------- */
+/* -------------------- PDF GENERATOR -------------------- */
 
 async function generatePdfBuffer(html) {
-  const file = { content: html };
-
-  const options = {
-    format: "A4",
-    printBackground: true,
-    margin: {
-      top: "10mm",
-      right: "12mm",
-      bottom: "10mm",
-      left: "12mm",
-    },
-  };
-
-  const pdfBuffer = await htmlToPdf.generatePdf(file, options);
-  return pdfBuffer;
+  return htmlToPdf.generatePdf(
+    { content: html },
+    {
+      format: "A4",
+      printBackground: true,
+      margin: {
+        top: "10mm",
+        right: "12mm",
+        bottom: "10mm",
+        left: "12mm",
+      },
+    }
+  );
 }
 
 module.exports = {
