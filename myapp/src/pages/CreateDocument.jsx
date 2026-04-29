@@ -55,47 +55,60 @@ export default function CreateDocument() {
   const [currencyLoading, setCurrencyLoading] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      try {
-        setCurrencyLoading(true);
-        const res = await fetch(
-          "https://restcountries.com/v3.1/all?fields=name,currencies,cca2"
-        );
-        const data = await res.json();
+  (async () => {
+    try {
+      setCurrencyLoading(true);
 
-        const opts = [];
-        for (const c of data) {
-          const currencies = c.currencies || {};
-          const codes = Object.keys(currencies);
-          if (codes.length > 0) {
-            const code = codes[0];
-            const info = currencies[code] || {};
-            opts.push({
-              country: c.name?.common || "Unknown",
-              code,
-              name: info.name || code,
-              symbol: info.symbol || code,
-            });
-          }
+      const res = await fetch("https://www.apicountries.com/countries");
+
+      if (!res.ok) throw new Error("API failed");
+
+      const data = await res.json();
+
+      const opts = [];
+
+     data.forEach((c) => {
+  if (Array.isArray(c.currencies)) {
+    c.currencies.forEach((code) => {
+      opts.push({
+        country: c.name || "Unknown",
+        code: code,
+        name: code,        
+        symbol: code,      
+      });
+    });
+  }
+});
+
+      // remove duplicates
+      const seen = new Set();
+      const unique = [];
+
+      for (const op of opts.sort((a, b) =>
+        a.country.localeCompare(b.country)
+      )) {
+        if (!seen.has(op.code)) {
+          seen.add(op.code);
+          unique.push(op);
         }
-
-        const seen = new Set();
-        const unique = [];
-        for (const op of opts.sort((a, b) => a.country.localeCompare(b.country))) {
-          if (!seen.has(op.code)) {
-            seen.add(op.code);
-            unique.push(op);
-          }
-        }
-
-        setCurrencyOptions(unique);
-      } catch (err) {
-        console.log(err);
-      } finally {
-        setCurrencyLoading(false);
       }
-    })();
-  }, []);
+
+      setCurrencyOptions(unique);
+
+    } catch (err) {
+      console.log("New API failed:", err);
+
+      // fallback (still keep this!)
+      setCurrencyOptions([
+        { code: "INR", name: "Indian Rupee", symbol: "₹" },
+        { code: "USD", name: "US Dollar", symbol: "$" },
+        { code: "AED", name: "UAE Dirham", symbol: "د.إ" },
+      ]);
+    } finally {
+      setCurrencyLoading(false);
+    }
+  })();
+}, []);
 
   const [popup, setPopup] = useState({
     open: false,
